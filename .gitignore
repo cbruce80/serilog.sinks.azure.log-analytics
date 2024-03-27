@@ -1,0 +1,10 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/Serilog.Sinks.AzureLogAnalytics
+/Serilog.Sinks.AzureLogAnalytics/.vs
+/Serilog.Sinks.AzureLogAnalytics/bin/Debug
+/Serilog.Sinks.AzureLogAnalytics/obj
+/Serilog.Sinks.AzureLogAnalytics.Sample/bin/Debug/net8.0
+/Serilog.Sinks.AzureLogAnalytics.Sample/obj/Debug/net8.0
