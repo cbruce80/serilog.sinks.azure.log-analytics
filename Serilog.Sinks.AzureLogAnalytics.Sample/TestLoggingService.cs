@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Azure.Core.Diagnostics;
+using Azure.Identity;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -17,7 +19,20 @@ public class TestLoggingService : IHostedService
     }
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        Console.WriteLine("Hello World!");
+        //using AzureEventSourceListener listener = AzureEventSourceListener.CreateConsoleLogger();
+        //DefaultAzureCredentialOptions options = new DefaultAzureCredentialOptions
+        //{
+        //    Diagnostics =
+        //    {
+        //        LoggedHeaderNames = { "x-ms-request-id" },
+        //        LoggedQueryParameters = { "api-version" },
+        //        IsLoggingContentEnabled = true,
+        //        IsAccountIdentifierLoggingEnabled = true
+        //    }
+        //};
+        _logger.LogInformation("Info {value}", "test value");
+        _logger.LogDebug("Debug {debugVal}", "debug");
+        _logger.LogError("error");
         return Task.CompletedTask;
     }
 
