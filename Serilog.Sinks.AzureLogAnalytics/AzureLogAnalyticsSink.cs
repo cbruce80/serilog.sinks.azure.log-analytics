@@ -29,12 +29,12 @@ public class AzureLogAnalyticsSink : ILogEventSink
     /// </summary>
     /// <param name="formatProvider"></param>
     /// <param name="configuration"></param>
-    public AzureLogAnalyticsSink(IFormatProvider? formatProvider, AzureLogAnalyticsSinkConfiguration configuration)
+    internal AzureLogAnalyticsSink(IFormatProvider? formatProvider, AzureLogAnalyticsSinkConfiguration configuration)
     {
         _configuration = configuration;
         _formatProvider = formatProvider;
         _InternalLogBuffer = new ConcurrentBag<object>();
-
+        
         _jsonSerializerOptions = new JsonSerializerOptions
         {
             MaxDepth = 0,

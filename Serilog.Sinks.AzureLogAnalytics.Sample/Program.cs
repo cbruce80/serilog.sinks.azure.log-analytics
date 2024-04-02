@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using Serilog.Core;
 using Serilog.Sinks.AzureLogAnalytics;
 using Serilog.Sinks.AzureLogAnalytics.Sample;
 using System.Reflection;
@@ -20,17 +21,8 @@ var host = Host.CreateDefaultBuilder()
     })
     .UseSerilog((hostingContext, services, loggerConfiguration) => loggerConfiguration
         .Enrich.FromLogContext()
-        .ReadFrom.Services(services)
-        .WriteTo.Console()
-        .WriteTo.AzureLogAnalytics(() =>
-        {
-            var configSection = hostingContext.Configuration.GetSection("SerilogLogAnalyticsSink");
-            var config = configSection.Get<AzureLogAnalyticsSinkConfiguration>();
-            if (config == null)
-            {
-                throw new NullReferenceException("SerilogLogAnalyticsSink section is missing");
-            }
-            return config;
-        }));
+        .ReadFrom.Configuration(hostingContext.Configuration)
+        .WriteTo.Console());
+
 
 await host.RunConsoleAsync();

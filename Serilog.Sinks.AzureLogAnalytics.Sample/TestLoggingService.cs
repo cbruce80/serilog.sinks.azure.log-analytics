@@ -2,6 +2,7 @@
 using Azure.Identity;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Serilog.Debugging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +20,7 @@ public class TestLoggingService : IHostedService
     }
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        SelfLog.Enable(Console.Error);
         //using AzureEventSourceListener listener = AzureEventSourceListener.CreateConsoleLogger();
         //DefaultAzureCredentialOptions options = new DefaultAzureCredentialOptions
         //{
