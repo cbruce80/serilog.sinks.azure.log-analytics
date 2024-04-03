@@ -30,7 +30,7 @@ Host.CreateDefaultBuilder()
     });
 
 ```
-`app.config.json`
+`JSON:app.config.json`
 ```
  "Serilog": {
     "Using": [ "Serilog.Sinks.AzureLogAnalytics" ],
@@ -71,12 +71,13 @@ Host.CreateDefaultBuilder()
 ```
 The `AzureLogAnalyticsSinkConfiguration`  type is used to configure the sink. 
 
-```
-DataCollectionEndpointUri : The data collection endpoindt setup in Azure
-MaxLogEntries : The maximum number of log entries to buffer before flushing to Log Analytics
-RuleId : The data collection rule id setup in Azure
-StreamName : The data collection rule stream name (your custom log analytics table
-OutputToConsole : An optional feature that outputs log output to the console. This is useful when configuring your data collection rule schema and transformation.
-TokenCredential : An instance of TokenCredential used to authenticate with Azure. This is optional. By default an DefaultAzureCredential is used.
-Transform : An optional Func<LogEvent, IDictionary<string, object>> to transform a Serilog LogEvent to an IDictionary<string, object> that will be serialized to Json to be sent to Log Analytics. A default implementation is provided if not set. Note: This method should be thread-safe, as it will be called concurrently by Serilog.
+|Property | Description
+|-|-
+DataCollectionEndpointUri|The data collection endpoindt setup in Azure
+MaxLogEntries|The maximum number of log entries to buffer before flushing to Log Analytics
+RuleId|The data collection rule id setup in Azure
+StreamName|The data collection rule stream name (your custom log analytics table
+OutputToConsole|An optional feature that outputs log output to the console. This is useful when configuring your data collection rule schema and transformation.
+TokenCredential|An instance of TokenCredential used to authenticate with Azure. This is optional. By default an DefaultAzureCredential is used.
+Transform|An optional Func<LogEvent, IDictionary<string, object>> to transform a Serilog LogEvent to an IDictionary<string, object> that will be serialized to Json to be sent to Log Analytics. A default implementation is provided if not set. **Note:** *This method should be thread-safe, as it will be called concurrently by Serilog.*
 
