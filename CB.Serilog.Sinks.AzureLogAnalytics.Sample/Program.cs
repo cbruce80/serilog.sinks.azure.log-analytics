@@ -7,9 +7,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Core;
+using Serilog.Debugging;
 using Serilog.Settings.Configuration;
 using System.Data;
 using System.Reflection;
+
+SelfLog.Enable(msg => Console.WriteLine(msg));
 
 var host = Host.CreateDefaultBuilder()
     .ConfigureHostConfiguration(builder =>
