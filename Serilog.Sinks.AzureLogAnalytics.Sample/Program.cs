@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Core;
+using Serilog.Settings.Configuration;
 using Serilog.Sinks.AzureLogAnalytics;
 using Serilog.Sinks.AzureLogAnalytics.Sample;
 using System.Reflection;
@@ -19,10 +20,14 @@ var host = Host.CreateDefaultBuilder()
         services.AddHostedService<TestLoggingService>();
 
     })
-    .UseSerilog((hostingContext, services, loggerConfiguration) => loggerConfiguration
+    .UseSerilog((hostingContext, services, loggerConfiguration) =>
+    {
+        var assemblies = new[] { typeof(AzureLogAnalyticsSink).Assembly };
+        var options = new ConfigurationReaderOptions(assemblies);
+        loggerConfiguration
         .Enrich.FromLogContext()
-        .ReadFrom.Configuration(hostingContext.Configuration)
-        .WriteTo.Console());
+        .ReadFrom.Configuration(hostingContext.Configuration, options);
+    });
 
 
 await host.RunConsoleAsync();

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Serilog.Debugging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,18 +21,18 @@ public class TestLoggingService : IHostedService
     }
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        SelfLog.Enable(Console.Error);
-        //using AzureEventSourceListener listener = AzureEventSourceListener.CreateConsoleLogger();
-        //DefaultAzureCredentialOptions options = new DefaultAzureCredentialOptions
-        //{
-        //    Diagnostics =
-        //    {
-        //        LoggedHeaderNames = { "x-ms-request-id" },
-        //        LoggedQueryParameters = { "api-version" },
-        //        IsLoggingContentEnabled = true,
-        //        IsAccountIdentifierLoggingEnabled = true
-        //    }
-        //};
+        SelfLog.Enable(msg => Console.WriteLine(msg));
+        using AzureEventSourceListener listener = AzureEventSourceListener.CreateConsoleLogger();
+        DefaultAzureCredentialOptions options = new DefaultAzureCredentialOptions
+        {
+            Diagnostics =
+            {
+                LoggedHeaderNames = { "x-ms-request-id" },
+                LoggedQueryParameters = { "api-version" },
+                IsLoggingContentEnabled = true,
+                IsAccountIdentifierLoggingEnabled = true
+            }
+        };
         _logger.LogInformation("Info {value}", "test value");
         _logger.LogDebug("Debug {debugVal}", "debug");
         _logger.LogError("error");
