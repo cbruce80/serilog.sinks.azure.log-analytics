@@ -30,8 +30,8 @@ Host.CreateDefaultBuilder()
     });
 
 ```
-`JSON:app.config.json`
-```
+`app.config.json`
+```JSON Snippet:AppConfig
  "Serilog": {
     "Using": [ "Serilog.Sinks.AzureLogAnalytics" ],
     "MinimumLevel": "Verbose",
