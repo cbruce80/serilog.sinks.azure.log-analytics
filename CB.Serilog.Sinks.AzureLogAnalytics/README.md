@@ -8,7 +8,7 @@ A bare bones custom [Serilog](https://serilog.net/) sink for Azure Log Analytics
 
 ### Install package
 ```dotnetcli
-dotnet add package Serilog.AzureLogAnalytics
+dotnet add package CB.Serilog.Sinks.AzureLogAnalytics
 ```
 ### Authenticate with Azure
 By default, a [DefaultAzureCredential](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/README.md#defaultazurecredential) is used to authenticate with Azure and no additional code is needed. Optionally, a `TokenCredential` can be passed in for use.
