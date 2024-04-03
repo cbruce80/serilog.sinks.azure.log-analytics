@@ -31,7 +31,19 @@ public class AzureLogAnalyticsSink : ILogEventSink
     /// <param name="configuration"></param>
     internal AzureLogAnalyticsSink(IFormatProvider? formatProvider, AzureLogAnalyticsSinkConfiguration configuration)
     {
+        if (configuration == null)
+        {
+            throw new ArgumentNullException(nameof(configuration));
+        }
+        
         _configuration = configuration;
+
+        if (_configuration.Transform is null)
+        {
+            _configuration.Transform = transform;
+        }
+   
+
         _formatProvider = formatProvider;
         _InternalLogBuffer = new ConcurrentBag<object>();
         
@@ -61,31 +73,42 @@ public class AzureLogAnalyticsSink : ILogEventSink
     {
         WriteEvent(logEvent);
     }
+    private IDictionary<string, object> transform(LogEvent logEvent)
+    {
+        Dictionary<String, string> properties = new Dictionary<String, string>();
+        foreach (var lep in logEvent.Properties)
+        {
+            if (logEvent.Properties.TryGetValue(lep.Key, out LogEventPropertyValue? value) && value is ScalarValue sv && sv.Value is string rawValue)
+            {
+                properties.Add(lep.Key, rawValue);
+            }
+        }
 
+        var logObject = new ExpandoObject() as IDictionary<string, object>;
+        logObject.Add("TimeGenerated", logEvent.Timestamp);
+        logObject.Add("Level", logEvent.Level.ToString());
+
+        logObject.Add("Template", logEvent.MessageTemplate.Text);
+        logObject.Add("Message", logEvent.RenderMessage());
+        logObject.Add("Exception", logEvent.Exception!);
+        logObject.Add("Properties", properties);
+
+        if (properties.ContainsKey("SourceContext"))
+        {
+            var logger = properties["SourceContext"];
+            properties.Remove("SourceContext");
+            logObject.Add("Logger", logger);
+        }
+
+        return logObject;
+    }
     private void WriteEvent(LogEvent logEvent)
     {
         try
         {
-            Dictionary<String, string> properties = new Dictionary<String, string>();
-            foreach (var lep in logEvent.Properties)
-            {
-                if (logEvent.Properties.TryGetValue(lep.Key, out LogEventPropertyValue? value) && value is ScalarValue sv && sv.Value is string rawValue)
-                {
-                    properties.Add(lep.Key, rawValue);
-                }
-            }
-            var logger = properties["SourceContext"];
-            properties.Remove("SourceContext");
 
-            var logObject = new ExpandoObject() as IDictionary<string, object>;
-            logObject.Add("TimeGenerated", logEvent.Timestamp);
-            logObject.Add("Level", logEvent.Level.ToString());
-            logObject.Add("Logger", logger);
-            logObject.Add("Template", logEvent.MessageTemplate.Text);
-            logObject.Add("Message", logEvent.RenderMessage());
-            logObject.Add("Exception", logEvent.Exception!);
-            logObject.Add("Properties", properties);
-
+            var logObject = _configuration.Transform!(logEvent);
+            
             _InternalLogBuffer.Add(logObject);
 
             if (_configuration.OutputToConsole)

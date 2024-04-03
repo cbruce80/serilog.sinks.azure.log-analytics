@@ -1,4 +1,5 @@
 ﻿using Azure.Core;
+using Serilog.Events;
 
 namespace Serilog.Sinks.AzureLogAnalytics
 {
@@ -32,9 +33,12 @@ namespace Serilog.Sinks.AzureLogAnalytics
         /// </summary>
         public TokenCredential? TokenCredential { get; set; }
         /// <summary>
-        /// Creates a new instance of 
+        /// Allows the customization of the JSON sent to Log Analytics
         /// </summary>
-        /// <exception cref="ArgumentNullException"></exception>
+        public Func<LogEvent, IDictionary<string, object>>? Transform { get; set; }
+        /// <summary>
+        /// Creates a new instance
+        /// </summary>
         public AzureLogAnalyticsSinkConfiguration()
         {
         }

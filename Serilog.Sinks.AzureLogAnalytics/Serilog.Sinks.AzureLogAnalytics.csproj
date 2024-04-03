@@ -5,9 +5,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Title>Azure Log Analytics Serilog Sink</Title>
+    <Title>Serilog Sink for Azure Log Analytics</Title>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <UserSecretsId>31a67bf7-759e-4706-a329-ab6ce5171e4b</UserSecretsId>
+    <Description>A Serilog Sink for Azure Log Analytics that used the Log Ingestion API</Description>
+    <Copyright>Cam Bruce</Copyright>
+    <PackageProjectUrl>https://github.com/cbruce80/serilog.sinks.azure.log-analytics</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/cbruce80/serilog.sinks.azure.log-analytics</RepositoryUrl>
+    <PackageTags>serilog;log analytics;azure</PackageTags>
+    <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

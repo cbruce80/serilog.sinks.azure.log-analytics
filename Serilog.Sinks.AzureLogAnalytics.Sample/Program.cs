@@ -8,6 +8,7 @@ using Serilog.Core;
 using Serilog.Settings.Configuration;
 using Serilog.Sinks.AzureLogAnalytics;
 using Serilog.Sinks.AzureLogAnalytics.Sample;
+using System.Data;
 using System.Reflection;
 
 var host = Host.CreateDefaultBuilder()
