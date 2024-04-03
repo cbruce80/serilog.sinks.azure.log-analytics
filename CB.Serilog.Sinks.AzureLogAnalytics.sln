@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34322.80
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serilog.Sinks.AzureLogAnalytics", "Serilog.Sinks.AzureLogAnalytics\Serilog.Sinks.AzureLogAnalytics.csproj", "{5B68194B-7690-4C3B-870D-44FE7E63CA44}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CB.Serilog.Sinks.AzureLogAnalytics", "CB.Serilog.Sinks.AzureLogAnalytics\CB.Serilog.Sinks.AzureLogAnalytics.csproj", "{5B68194B-7690-4C3B-870D-44FE7E63CA44}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serilog.Sinks.AzureLogAnalytics.Sample", "Serilog.Sinks.AzureLogAnalytics.Sample\Serilog.Sinks.AzureLogAnalytics.Sample.csproj", "{79C2F372-C409-4836-ADF1-45CF79AAF75D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CB.Serilog.Sinks.AzureLogAnalytics.Sample", "CB.Serilog.Sinks.AzureLogAnalytics.Sample\CB.Serilog.Sinks.AzureLogAnalytics.Sample.csproj", "{79C2F372-C409-4836-ADF1-45CF79AAF75D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

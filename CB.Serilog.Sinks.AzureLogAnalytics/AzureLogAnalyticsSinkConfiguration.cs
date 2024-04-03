@@ -1,7 +1,7 @@
 ﻿using Azure.Core;
 using Serilog.Events;
 
-namespace Serilog.Sinks.AzureLogAnalytics
+namespace CB.Serilog.Sinks.AzureLogAnalytics
 {
     /// <summary>
     /// Configuration for AzureLogAnalyticsSink

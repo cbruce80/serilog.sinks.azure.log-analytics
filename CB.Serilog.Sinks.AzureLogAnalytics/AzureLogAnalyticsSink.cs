@@ -1,7 +1,6 @@
 ﻿using Azure.Core;
 using Azure.Identity;
 using Azure.Monitor.Ingestion;
-using Serilog;
 using Serilog.Core;
 using Serilog.Debugging;
 using Serilog.Events;
@@ -10,7 +9,7 @@ using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Serilog.Sinks.AzureLogAnalytics;
+namespace CB.Serilog.Sinks.AzureLogAnalytics;
 
 /// <summary>
 /// A Serilog sink that targets Azure Log Analytics via the Ingestion API
@@ -22,7 +21,7 @@ public class AzureLogAnalyticsSink : ILogEventSink
     private readonly AzureLogAnalyticsSinkConfiguration _configuration;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
     private readonly TokenCredential _tokenCredential;
-    private ConcurrentBag<object> _InternalLogBuffer; 
+    private ConcurrentBag<object> _InternalLogBuffer;
 
     /// <summary>
     /// Creates a new instance
@@ -35,18 +34,18 @@ public class AzureLogAnalyticsSink : ILogEventSink
         {
             throw new ArgumentNullException(nameof(configuration));
         }
-        
+
         _configuration = configuration;
 
         if (_configuration.Transform is null)
         {
             _configuration.Transform = transform;
         }
-   
+
 
         _formatProvider = formatProvider;
         _InternalLogBuffer = new ConcurrentBag<object>();
-        
+
         _jsonSerializerOptions = new JsonSerializerOptions
         {
             MaxDepth = 0,
@@ -75,7 +74,7 @@ public class AzureLogAnalyticsSink : ILogEventSink
     }
     private IDictionary<string, object> transform(LogEvent logEvent)
     {
-        Dictionary<String, string> properties = new Dictionary<String, string>();
+        Dictionary<string, string> properties = new Dictionary<string, string>();
         foreach (var lep in logEvent.Properties)
         {
             if (logEvent.Properties.TryGetValue(lep.Key, out LogEventPropertyValue? value) && value is ScalarValue sv && sv.Value is string rawValue)
@@ -108,7 +107,7 @@ public class AzureLogAnalyticsSink : ILogEventSink
         {
 
             var logObject = _configuration.Transform!(logEvent);
-            
+
             _InternalLogBuffer.Add(logObject);
 
             if (_configuration.OutputToConsole)

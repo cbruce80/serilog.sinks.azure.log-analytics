@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Serilog.Sinks.AzureLogAnalytics.Sample;
+namespace CB.Serilog.Sinks.AzureLogAnalytics.Sample;
 
 public class TestLoggingService : IHostedService
 {

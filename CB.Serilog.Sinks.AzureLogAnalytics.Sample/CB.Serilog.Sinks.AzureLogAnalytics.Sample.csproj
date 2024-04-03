@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Serilog.Sinks.AzureLogAnalytics\Serilog.Sinks.AzureLogAnalytics.csproj" />
+    <ProjectReference Include="..\CB.Serilog.Sinks.AzureLogAnalytics\CB.Serilog.Sinks.AzureLogAnalytics.csproj" />
   </ItemGroup>
 
 </Project>

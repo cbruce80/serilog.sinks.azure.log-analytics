@@ -1,6 +1,7 @@
-﻿using Serilog.Configuration;
+﻿using Serilog;
+using Serilog.Configuration;
 
-namespace Serilog.Sinks.AzureLogAnalytics;
+namespace CB.Serilog.Sinks.AzureLogAnalytics;
 
 public static class AzureLogAnalyticsSinkConfigurationExtensions
 {

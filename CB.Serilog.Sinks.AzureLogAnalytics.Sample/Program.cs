@@ -1,13 +1,13 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using CB.Serilog.Sinks.AzureLogAnalytics;
+using CB.Serilog.Sinks.AzureLogAnalytics.Sample;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Core;
 using Serilog.Settings.Configuration;
-using Serilog.Sinks.AzureLogAnalytics;
-using Serilog.Sinks.AzureLogAnalytics.Sample;
 using System.Data;
 using System.Reflection;
 
