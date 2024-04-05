@@ -1,6 +1,7 @@
 ﻿using Azure.Core;
 using Azure.Identity;
 using Azure.Monitor.Ingestion;
+using CB.Serilog.Sinks.AzureLogAnalytics.Configuration;
 using Serilog.Core;
 using Serilog.Debugging;
 using Serilog.Events;
@@ -49,9 +50,9 @@ public class AzureLogAnalyticsSink : ILogEventSink
         _jsonSerializerOptions = new JsonSerializerOptions
         {
             MaxDepth = 0,
-            ReferenceHandler = ReferenceHandler.IgnoreCycles
-
+            ReferenceHandler = ReferenceHandler.IgnoreCycles,
         };
+        _jsonSerializerOptions.Converters.Add(new ExceptionConverter<Exception>());
 
         if (configuration.TokenCredential != null)
         {
@@ -133,7 +134,9 @@ public class AzureLogAnalyticsSink : ILogEventSink
         }
         catch (Exception ex)
         {
-            SelfLog.WriteLine($"AzureLogAnalyticsSink: {ex.Message}");
+            // santize any curly brackets so they aren't interpreted as format strings
+            var sanitizedMessage = ex.Message?.Replace("{", "{{").Replace("}", "}}");
+            SelfLog.WriteLine($"AzureLogAnalyticsSink: {sanitizedMessage}    ");
         }
     }
 }

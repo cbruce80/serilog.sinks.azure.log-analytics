@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Core;
+using Serilog.Sinks.SystemConsole;
 using Serilog.Debugging;
 using Serilog.Settings.Configuration;
 using System.Data;
@@ -27,7 +28,10 @@ var host = Host.CreateDefaultBuilder()
     .UseSerilog((hostingContext, services, loggerConfiguration) =>
     {
         SelfLog.Enable(msg => Console.WriteLine(msg));
-        var assemblies = new[] { typeof(AzureLogAnalyticsSink).Assembly };
+        var assemblies = new[] {
+            typeof(AzureLogAnalyticsSink).Assembly,
+            typeof(Serilog.Sinks.SystemConsole.Themes.ConsoleTheme).Assembly
+        };
         var options = new ConfigurationReaderOptions(assemblies);
         loggerConfiguration
         .Enrich.FromLogContext()

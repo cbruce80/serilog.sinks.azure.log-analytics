@@ -21,6 +21,7 @@ public class TestLoggingService : IHostedService
     }
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        /*
         SelfLog.Enable(msg => Console.WriteLine(msg));
         using AzureEventSourceListener listener = AzureEventSourceListener.CreateConsoleLogger();
         DefaultAzureCredentialOptions options = new DefaultAzureCredentialOptions
@@ -33,9 +34,18 @@ public class TestLoggingService : IHostedService
                 IsAccountIdentifierLoggingEnabled = true
             }
         };
+        */
         _logger.LogInformation("Info {value}", "test value");
         _logger.LogDebug("Debug {debugVal}", "debug");
         _logger.LogError("error");
+        try
+        {
+            throw new DivideByZeroException("error dividing by 0");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception error");
+        }
         return Task.CompletedTask;
     }
 
