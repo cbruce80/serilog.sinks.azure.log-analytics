@@ -21,6 +21,7 @@ public class TestLoggingService : IHostedService
     }
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        using AzureEventSourceListener listener = AzureEventSourceListener.CreateConsoleLogger();
         /*
         SelfLog.Enable(msg => Console.WriteLine(msg));
         using AzureEventSourceListener listener = AzureEventSourceListener.CreateConsoleLogger();
@@ -46,6 +47,13 @@ public class TestLoggingService : IHostedService
         {
             _logger.LogError(ex, "Exception error");
         }
+
+
+        for (int i = 0; i <= 50; i++)
+        {
+            _logger.LogInformation("Test Log #{num}", i);
+        }
+
         return Task.CompletedTask;
     }
 

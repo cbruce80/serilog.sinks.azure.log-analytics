@@ -12,6 +12,7 @@ using Serilog.Debugging;
 using Serilog.Settings.Configuration;
 using System.Data;
 using System.Reflection;
+using CB.Serilog.Sinks.AzureLogAnalytics.Configuration;
 
 
 
@@ -28,10 +29,7 @@ var host = Host.CreateDefaultBuilder()
     .UseSerilog((hostingContext, services, loggerConfiguration) =>
     {
         SelfLog.Enable(msg => Console.WriteLine(msg));
-        var assemblies = new[] {
-            typeof(AzureLogAnalyticsSink).Assembly,
-            typeof(Serilog.Sinks.SystemConsole.Themes.ConsoleTheme).Assembly
-        };
+        var assemblies = new[] { typeof(AzureLogAnalyticsSinkConfigurationExtensions).Assembly, typeof(ConsoleLoggerConfigurationExtensions).Assembly };
         var options = new ConfigurationReaderOptions(assemblies);
         loggerConfiguration
         .Enrich.FromLogContext()

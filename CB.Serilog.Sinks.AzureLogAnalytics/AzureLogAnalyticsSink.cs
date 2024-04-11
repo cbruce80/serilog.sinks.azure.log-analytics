@@ -15,15 +15,17 @@ namespace CB.Serilog.Sinks.AzureLogAnalytics;
 /// <summary>
 /// A Serilog sink that targets Azure Log Analytics via the Ingestion API
 /// </summary>
-public class AzureLogAnalyticsSink : ILogEventSink
+public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
 {
     private readonly IFormatProvider? _formatProvider;
     private readonly LogsIngestionClient _logIngestionClient;
     private readonly AzureLogAnalyticsSinkConfiguration _configuration;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
     private readonly TokenCredential _tokenCredential;
-    private ConcurrentBag<object> _InternalLogBuffer;
-
+    private readonly Func<LogEvent, IDictionary<string, object>> _transform;
+    private readonly ConcurrentQueue<IDictionary<string, object>>_logEventQueue;
+    //private ConcurrentBag<object> _InternalLogBuffer;
+    private SemaphoreSlim _semaphore;
     /// <summary>
     /// Creates a new instance
     /// </summary>
@@ -31,21 +33,22 @@ public class AzureLogAnalyticsSink : ILogEventSink
     /// <param name="configuration"></param>
     internal AzureLogAnalyticsSink(IFormatProvider? formatProvider, AzureLogAnalyticsSinkConfiguration configuration)
     {
+        _semaphore = new SemaphoreSlim(1);
+        _transform = transform;
+
         if (configuration == null)
         {
             throw new ArgumentNullException(nameof(configuration));
         }
-
         _configuration = configuration;
 
-        if (_configuration.Transform is null)
+        if (  _configuration.Transform != null)
         {
-            _configuration.Transform = transform;
+            _transform = _configuration.Transform;
         }
-
-
+     
         _formatProvider = formatProvider;
-        _InternalLogBuffer = new ConcurrentBag<object>();
+        _logEventQueue = new ConcurrentQueue<IDictionary<string, object>>();
 
         _jsonSerializerOptions = new JsonSerializerOptions
         {
@@ -71,7 +74,21 @@ public class AzureLogAnalyticsSink : ILogEventSink
     /// <param name="logEvent"></param>
     public void Emit(LogEvent logEvent)
     {
-        WriteEvent(logEvent);
+        // transform
+        var logObject = _transform(logEvent);
+
+        if (_configuration.OutputToConsole)
+        {
+            var json = JsonSerializer.Serialize(logObject, _jsonSerializerOptions);
+            Console.WriteLine(json);
+        }
+
+        _logEventQueue.Enqueue(logObject);
+
+        if (_logEventQueue.Count >= _configuration.MaxLogEntries)
+        {
+            Task.Factory.StartNew(FlushEventsAsync, TaskCreationOptions.LongRunning);
+        }
     }
     private IDictionary<string, object> transform(LogEvent logEvent)
     {
@@ -102,42 +119,44 @@ public class AzureLogAnalyticsSink : ILogEventSink
 
         return logObject;
     }
-    private void WriteEvent(LogEvent logEvent)
+    private async Task FlushEventsAsync()
     {
-        try
-        {
-
-            var logObject = _configuration.Transform!(logEvent);
-
-            _InternalLogBuffer.Add(logObject);
-
-            if (_configuration.OutputToConsole)
+            try
             {
-                var json = JsonSerializer.Serialize(logObject, _jsonSerializerOptions);
-                Console.WriteLine(json);
-            }
-
-            if (_InternalLogBuffer.Count >= _configuration.MaxLogEntries)
-            {
-                var jsonLog = JsonSerializer.Serialize(_InternalLogBuffer, _jsonSerializerOptions);
-                var response = _logIngestionClient.Upload(_configuration.RuleId, _configuration.StreamName, RequestContent.Create(jsonLog));
+                _semaphore.Wait();
+                var logItems = new List<IDictionary<string, object>>();
+                for (int i = 0; i <= _configuration.MaxLogEntries; i++)
+                {
+                    if (_logEventQueue.TryDequeue(out var item))
+                    {
+                        logItems.Add(item);
+                    }
+                }
+                var jsonLog = JsonSerializer.Serialize(logItems, _jsonSerializerOptions);
+                var response = await _logIngestionClient.UploadAsync(_configuration.RuleId, _configuration.StreamName, RequestContent.Create(jsonLog));
 
                 if (response.IsError)
                 {
-                    throw new Exception($"Error posting to ingestion api: {response.Status} {response.ReasonPhrase}");
+                    SelfLog.WriteLine($"AzureLogAnalyticsSink: Error posting to ingestion api: {response.Status} {response.ReasonPhrase}");
                 }
-                else
-                {
-                    _InternalLogBuffer.Clear();
-                }
+
             }
-        }
-        catch (Exception ex)
-        {
-            // santize any curly brackets so they aren't interpreted as format strings
-            var sanitizedMessage = ex.Message?.Replace("{", "{{").Replace("}", "}}");
-            SelfLog.WriteLine($"AzureLogAnalyticsSink: {sanitizedMessage}    ");
-        }
+            catch (Exception ex)
+            {
+                // santize any curly brackets so they aren't interpreted as format strings
+                var sanitizedMessage = ex.Message?.Replace("{", "{{").Replace("}", "}}");
+                SelfLog.WriteLine($"AzureLogAnalyticsSink: {sanitizedMessage}");
+            }
+            finally
+            {
+                Console.WriteLine("{0} release", Environment.CurrentManagedThreadId);
+                _semaphore.Release();
+            }
+    }
+
+    public void Dispose()
+    {
+        _semaphore.Dispose();
     }
 }
 
