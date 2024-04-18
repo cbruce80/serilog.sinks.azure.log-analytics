@@ -15,15 +15,18 @@ namespace CB.Serilog.Sinks.AzureLogAnalytics.Sample;
 public class TestLoggingService : IHostedService
 {
     private readonly ILogger<TestLoggingService> _logger;
-    public TestLoggingService(ILogger<TestLoggingService> logger)
+    private readonly IHostApplicationLifetime _applicationLifetime;
+    public TestLoggingService(ILogger<TestLoggingService> logger, IHostApplicationLifetime applicationLifetime)
     {
+        _applicationLifetime = applicationLifetime;
         _logger = logger;
     }
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        using AzureEventSourceListener listener = AzureEventSourceListener.CreateConsoleLogger();
-        /*
         SelfLog.Enable(msg => Console.WriteLine(msg));
+
+        /*
+        
         using AzureEventSourceListener listener = AzureEventSourceListener.CreateConsoleLogger();
         DefaultAzureCredentialOptions options = new DefaultAzureCredentialOptions
         {
@@ -46,14 +49,18 @@ public class TestLoggingService : IHostedService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception error");
+            var json = new { test = "test with {curly brackets}", date = DateTimeOffset.Now, max = decimal.MaxValue, exp = ex };
+            _logger.LogInformation("json = {json}", json);
         }
 
 
-        for (int i = 0; i <= 50; i++)
+
+
+        for (int i = 0; i <= 10; i++)
         {
             _logger.LogInformation("Test Log #{num}", i);
         }
-
+        // _applicationLifetime.StopApplication();
         return Task.CompletedTask;
     }
 

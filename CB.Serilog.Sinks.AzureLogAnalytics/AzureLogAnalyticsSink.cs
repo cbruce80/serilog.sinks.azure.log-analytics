@@ -100,6 +100,14 @@ public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
                 properties.Add(lep.Key, rawValue);
             }
         }
+        Dictionary<String, object>? exDic = null;
+
+        if (logEvent.Exception != null)
+        {
+            exDic = new Dictionary<String, object>();
+            exDic.Add("Message", logEvent.Exception.Message);
+            exDic.Add("StackTrace", logEvent.Exception.StackTrace!);
+        }
 
         var logObject = new ExpandoObject() as IDictionary<string, object>;
         logObject.Add("TimeGenerated", logEvent.Timestamp);
@@ -107,7 +115,7 @@ public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
 
         logObject.Add("Template", logEvent.MessageTemplate.Text);
         logObject.Add("Message", logEvent.RenderMessage());
-        logObject.Add("Exception", logEvent.Exception!);
+        logObject.Add("Exception", exDic != null ? exDic : null!);
         logObject.Add("Properties", properties);
 
         if (properties.ContainsKey("SourceContext"))
@@ -121,38 +129,40 @@ public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
     }
     private async Task FlushEventsAsync()
     {
-            try
+        try
+        {
+            _semaphore.Wait();
+            var logItems = new List<IDictionary<string, object>>();
+            for (int i = 0; i <= _configuration.MaxLogEntries; i++)
             {
-                _semaphore.Wait();
-                var logItems = new List<IDictionary<string, object>>();
-                for (int i = 0; i <= _configuration.MaxLogEntries; i++)
+                if (_logEventQueue.TryDequeue(out var item))
                 {
-                    if (_logEventQueue.TryDequeue(out var item))
-                    {
-                        logItems.Add(item);
-                    }
+                    logItems.Add(item);
                 }
-                var jsonLog = JsonSerializer.Serialize(logItems, _jsonSerializerOptions);
-                var response = await _logIngestionClient.UploadAsync(_configuration.RuleId, _configuration.StreamName, RequestContent.Create(jsonLog));
+            }
+            var jsonLog = JsonSerializer.Serialize(logItems, _jsonSerializerOptions);
+            var response = await _logIngestionClient.UploadAsync(_configuration.RuleId, _configuration.StreamName, RequestContent.Create(jsonLog));
 
-                if (response.IsError)
-                {
-                    SelfLog.WriteLine($"AzureLogAnalyticsSink: Error posting to ingestion api: {response.Status} {response.ReasonPhrase}");
-                }
+            if (response.IsError)
+            {
+                SelfLog.WriteLine($"AzureLogAnalyticsSink: Error posting to ingestion api: {response.Status} {response.ReasonPhrase}");
+            }
 
-            }
-            catch (Exception ex)
-            {
-                // santize any curly brackets so they aren't interpreted as format strings
-                var sanitizedMessage = ex.Message?.Replace("{", "{{").Replace("}", "}}");
-                SelfLog.WriteLine($"AzureLogAnalyticsSink: {sanitizedMessage}");
-            }
-            finally
-            {
-                Console.WriteLine("{0} release", Environment.CurrentManagedThreadId);
-                _semaphore.Release();
-            }
+        }
+        catch (Exception ex)
+        {
+            // santize any curly brackets so they aren't interpreted as format strings
+            var sanitizedMessage = ex.Message?.Replace("{", "{{").Replace("}", "}}");
+            SelfLog.WriteLine($"AzureLogAnalyticsSink: {sanitizedMessage}\n{ex.StackTrace}");
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
     }
+
+    
+
 
     public void Dispose()
     {
