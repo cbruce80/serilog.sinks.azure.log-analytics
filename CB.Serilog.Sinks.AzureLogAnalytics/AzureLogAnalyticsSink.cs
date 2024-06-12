@@ -2,13 +2,13 @@
 using Azure.Identity;
 using Azure.Monitor.Ingestion;
 using CB.Serilog.Sinks.AzureLogAnalytics.Configuration;
+using Newtonsoft.Json;
 using Serilog.Core;
 using Serilog.Debugging;
 using Serilog.Events;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Dynamic;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace CB.Serilog.Sinks.AzureLogAnalytics;
 
@@ -20,7 +20,6 @@ public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
     private readonly IFormatProvider? _formatProvider;
     private readonly LogsIngestionClient _logIngestionClient;
     private readonly AzureLogAnalyticsSinkConfiguration _configuration;
-    private readonly JsonSerializerOptions _jsonSerializerOptions;
     private readonly TokenCredential _tokenCredential;
     private readonly Func<LogEvent, IDictionary<string, object>> _transform;
     private readonly ConcurrentQueue<IDictionary<string, object>>_logEventQueue;
@@ -50,12 +49,6 @@ public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
         _formatProvider = formatProvider;
         _logEventQueue = new ConcurrentQueue<IDictionary<string, object>>();
 
-        _jsonSerializerOptions = new JsonSerializerOptions
-        {
-            MaxDepth = 0,
-            ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        };
-        _jsonSerializerOptions.Converters.Add(new ExceptionConverter<Exception>());
 
         if (configuration.TokenCredential != null)
         {
@@ -79,7 +72,7 @@ public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
 
         if (_configuration.OutputToConsole)
         {
-            var json = JsonSerializer.Serialize(logObject, _jsonSerializerOptions);
+            var json = JsonConvert.SerializeObject(logObject, Formatting.Indented);
             Console.WriteLine(json);
         }
 
@@ -105,7 +98,7 @@ public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
         if (logEvent.Exception != null)
         {
             exDic = new Dictionary<String, object>();
-            exDic.Add("Message", logEvent.Exception.Message);
+            exDic.Add("Message", logEvent.Exception.Message.Replace("{", "{{").Replace("}", "}}"));
             exDic.Add("StackTrace", logEvent.Exception.StackTrace!);
         }
 
@@ -132,7 +125,7 @@ public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
         try
         {
             _semaphore.Wait();
-            var logItems = new List<IDictionary<string, object>>();
+            var logItems = new ArrayList();
             for (int i = 0; i <= _configuration.MaxLogEntries; i++)
             {
                 if (_logEventQueue.TryDequeue(out var item))
@@ -140,7 +133,7 @@ public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
                     logItems.Add(item);
                 }
             }
-            var jsonLog = JsonSerializer.Serialize(logItems, _jsonSerializerOptions);
+            var jsonLog = JsonConvert.SerializeObject(logItems, Formatting.Indented);
             var response = await _logIngestionClient.UploadAsync(_configuration.RuleId, _configuration.StreamName, RequestContent.Create(jsonLog));
 
             if (response.IsError)
@@ -152,8 +145,8 @@ public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
         catch (Exception ex)
         {
             // santize any curly brackets so they aren't interpreted as format strings
-            var sanitizedMessage = ex.Message?.Replace("{", "{{").Replace("}", "}}");
-            SelfLog.WriteLine($"AzureLogAnalyticsSink: {sanitizedMessage}\n{ex.StackTrace}");
+            //var sanitizedMessage = ex.Message?.Replace("{", "{{").Replace("}", "}}");
+            SelfLog.WriteLine($"AzureLogAnalyticsSink: {ex.Message} StackTrace: {ex.StackTrace}");
         }
         finally
         {

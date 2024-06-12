@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "CB.Serilog.Sinks.AzureLogAnalytics.Sample": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
