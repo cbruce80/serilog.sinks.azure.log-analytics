@@ -2,90 +2,113 @@
 using Azure.Identity;
 using Azure.Monitor.Ingestion;
 using CB.Serilog.Sinks.AzureLogAnalytics.Configuration;
-using Newtonsoft.Json;
-using Serilog.Core;
 using Serilog.Debugging;
 using Serilog.Events;
-using System.Collections;
-using System.Collections.Concurrent;
-using System.Dynamic;
+using Serilog.Sinks.PeriodicBatching;
+using System.Text.Json;
+using IBatchedLogEventSink = Serilog.Sinks.PeriodicBatching.IBatchedLogEventSink;
 
 namespace CB.Serilog.Sinks.AzureLogAnalytics;
 
 /// <summary>
 /// A Serilog sink that targets Azure Log Analytics via the Ingestion API
 /// </summary>
-public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
+public class AzureLogAnalyticsSink : IBatchedLogEventSink
 {
-    private readonly IFormatProvider? _formatProvider;
     private readonly LogsIngestionClient _logIngestionClient;
-    private readonly AzureLogAnalyticsSinkConfiguration _configuration;
     private readonly TokenCredential _tokenCredential;
     private readonly Func<LogEvent, IDictionary<string, object>> _transform;
-    private readonly ConcurrentQueue<IDictionary<string, object>>_logEventQueue;
-    //private ConcurrentBag<object> _InternalLogBuffer;
-    private SemaphoreSlim _semaphore;
+
+    private readonly AzureLogAnalyticsSinkConfiguration _config;
+    private readonly IFormatProvider? _formatProvider;
     /// <summary>
     /// Creates a new instance
     /// </summary>
     /// <param name="formatProvider"></param>
     /// <param name="configuration"></param>
-    internal AzureLogAnalyticsSink(IFormatProvider? formatProvider, AzureLogAnalyticsSinkConfiguration configuration)
+    public AzureLogAnalyticsSink(
+        AzureLogAnalyticsSinkConfiguration config,
+        IFormatProvider? formatProvider = null)
     {
-        _semaphore = new SemaphoreSlim(1);
-        _transform = transform;
-
-        if (configuration == null)
-        {
-            throw new ArgumentNullException(nameof(configuration));
-        }
-        _configuration = configuration;
-
-        if (  _configuration.Transform != null)
-        {
-            _transform = _configuration.Transform;
-        }
-     
+        _config = config ?? throw new ArgumentNullException(nameof(config));
         _formatProvider = formatProvider;
-        _logEventQueue = new ConcurrentQueue<IDictionary<string, object>>();
 
+        if (_config.DataCollectionEndpointUri == null)
+            throw new ArgumentException("DataCollectionEndpointUri must be provided.");
 
-        if (configuration.TokenCredential != null)
+        if (string.IsNullOrWhiteSpace(_config.RuleId))
+            throw new ArgumentException("RuleId must be provided.");
+
+        if (string.IsNullOrWhiteSpace(_config.StreamName))
+            throw new ArgumentException("StreamName must be provided.");
+
+     if (_config.TokenCredential != null)
         {
-            _tokenCredential = configuration.TokenCredential;
+            _tokenCredential = _config.TokenCredential;
         }
         else
         {
             _tokenCredential = new DefaultAzureCredential();
         }
-
-        _logIngestionClient = new LogsIngestionClient(configuration.DataCollectionEndpointUri, _tokenCredential);
+      if (  _config.Transform != null)
+        {
+            _transform = _config.Transform;
+        }
+        _logIngestionClient = new LogsIngestionClient(
+            _config.DataCollectionEndpointUri, _tokenCredential);
     }
+    
     /// <summary>
-    /// Writes an log event to an internal buffer and flushes to the Log Analytics Ingestion API if necessary
+    /// Writes a batch of log events to the Log Analytics Ingestion API
     /// </summary>
-    /// <param name="logEvent"></param>
-    public void Emit(LogEvent logEvent)
+    /// <param name="batch"></param>
+   public async Task EmitBatchAsync(IEnumerable<LogEvent> batch)
     {
-        // transform
-        var logObject = _transform(logEvent);
+        var logItems = new List<IDictionary<string, object>>();
 
-        if (_configuration.OutputToConsole)
+        foreach (var logEvent in batch)
         {
-            var json = JsonConvert.SerializeObject(logObject, Formatting.Indented);
-            Console.WriteLine(json);
+            var logObject = _transform(logEvent);
+
+            if (_config.OutputToConsole)
+            {
+                var json = JsonSerializer.Serialize(logObject, new JsonSerializerOptions { WriteIndented = true });
+                Console.WriteLine(json);
+            }
+
+            logItems.Add(logObject);
         }
 
-        _logEventQueue.Enqueue(logObject);
-
-        if (_logEventQueue.Count >= _configuration.MaxLogEntries)
+        if (logItems.Count == 0)
         {
-            Task.Factory.StartNew(FlushEventsAsync, TaskCreationOptions.LongRunning);
+            return;
+        }
+
+        try
+        {
+            var jsonLog = JsonSerializer.Serialize(logItems, new JsonSerializerOptions { WriteIndented = true });
+            var response = await _logIngestionClient.UploadAsync(_config.RuleId, _config.StreamName, RequestContent.Create(jsonLog));
+
+            if (response.IsError)
+            {
+                SelfLog.WriteLine($"AzureLogAnalyticsSink: Error posting to ingestion api: {response.Status} {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            SelfLog.WriteLine($"AzureLogAnalyticsSink: {ex.Message} StackTrace: {ex.StackTrace}");
         }
     }
+
+
+    public Task OnEmptyBatchAsync()
+    {
+        return Task.CompletedTask;
+    }
+
     private IDictionary<string, object> transform(LogEvent logEvent)
     {
-        Dictionary<string, string> properties = new Dictionary<string, string>();
+        var properties = new Dictionary<string, string>();
         foreach (var lep in logEvent.Properties)
         {
             if (logEvent.Properties.TryGetValue(lep.Key, out LogEventPropertyValue? value) && value is ScalarValue sv && sv.Value is string rawValue)
@@ -93,73 +116,38 @@ public class AzureLogAnalyticsSink : ILogEventSink, IDisposable
                 properties.Add(lep.Key, rawValue);
             }
         }
-        Dictionary<String, object>? exDic = null;
 
+        Dictionary<string, object>? exDic = null;
         if (logEvent.Exception != null)
         {
-            exDic = new Dictionary<String, object>();
-            exDic.Add("Message", logEvent.Exception.Message.Replace("{", "{{").Replace("}", "}}"));
-            exDic.Add("StackTrace", logEvent.Exception.StackTrace!);
+            exDic = new Dictionary<string, object>
+            {
+                { "Message", logEvent.Exception.Message.Replace("{", "{{").Replace("}", "}}") },
+                { "StackTrace", logEvent.Exception.StackTrace ?? string.Empty }
+            };
         }
 
-        var logObject = new ExpandoObject() as IDictionary<string, object>;
-        logObject.Add("TimeGenerated", logEvent.Timestamp);
-        logObject.Add("Level", logEvent.Level.ToString());
+        var logObject = new Dictionary<string, object>
+        {
+            { "TimeGenerated", logEvent.Timestamp },
+            { "Level", logEvent.Level.ToString() },
+            { "Template", logEvent.MessageTemplate.Text },
+            { "Message", logEvent.RenderMessage() },
+            { "Properties", properties }
+        };
 
-        logObject.Add("Template", logEvent.MessageTemplate.Text);
-        logObject.Add("Message", logEvent.RenderMessage());
-        logObject.Add("Exception", exDic != null ? exDic : null!);
-        logObject.Add("Properties", properties);
+        if (exDic != null)
+        {
+            logObject["Exception"] = exDic;
+        }
 
         if (properties.ContainsKey("SourceContext"))
         {
             var logger = properties["SourceContext"];
             properties.Remove("SourceContext");
-            logObject.Add("Logger", logger);
+            logObject["Logger"] = logger;
         }
 
         return logObject;
     }
-    private async Task FlushEventsAsync()
-    {
-        try
-        {
-            _semaphore.Wait();
-            var logItems = new ArrayList();
-            for (int i = 0; i <= _configuration.MaxLogEntries; i++)
-            {
-                if (_logEventQueue.TryDequeue(out var item))
-                {
-                    logItems.Add(item);
-                }
-            }
-            var jsonLog = JsonConvert.SerializeObject(logItems, Formatting.Indented);
-            var response = await _logIngestionClient.UploadAsync(_configuration.RuleId, _configuration.StreamName, RequestContent.Create(jsonLog));
-
-            if (response.IsError)
-            {
-                SelfLog.WriteLine($"AzureLogAnalyticsSink: Error posting to ingestion api: {response.Status} {response.ReasonPhrase}");
-            }
-
-        }
-        catch (Exception ex)
-        {
-            // santize any curly brackets so they aren't interpreted as format strings
-            //var sanitizedMessage = ex.Message?.Replace("{", "{{").Replace("}", "}}");
-            SelfLog.WriteLine($"AzureLogAnalyticsSink: {ex.Message} StackTrace: {ex.StackTrace}");
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
-    }
-
-    
-
-
-    public void Dispose()
-    {
-        _semaphore.Dispose();
-    }
 }
-

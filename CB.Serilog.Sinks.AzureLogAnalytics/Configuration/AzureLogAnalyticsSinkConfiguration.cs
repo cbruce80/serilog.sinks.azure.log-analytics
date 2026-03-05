@@ -15,10 +15,6 @@ namespace CB.Serilog.Sinks.AzureLogAnalytics.Configuration
         /// <summary>
         /// The maximum number of log entries buffered before they are flushed to the Ingestion API
         /// </summary>
-        public int MaxLogEntries { get; set; } = 10;
-        /// <summary>
-        /// Data Collection Rule - immutableId
-        /// </summary>
         public string RuleId { get; set; } = string.Empty;
         /// <summary>
         /// Data Collection Rile - steamDeclarations
@@ -39,6 +35,17 @@ namespace CB.Serilog.Sinks.AzureLogAnalytics.Configuration
         /// <summary>
         /// Creates a new instance
         /// </summary>
+        
+    
+        /// <summary>
+        /// Optional batching configuration
+        /// </summary>
+        public int BatchSizeLimit { get; set; } = 100;
+
+        public int QueueLimit { get; set; } = 10000;
+
+        public TimeSpan Period { get; set; } = TimeSpan.FromSeconds(2);
+    
         public AzureLogAnalyticsSinkConfiguration()
         {
         }
