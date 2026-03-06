@@ -1,5 +1,8 @@
 # Serilog Sink for Azure Log Analytics
 
+[![NuGet Version](https://img.shields.io/nuget/v/CB.Serilog.Sinks.AzureLogAnalytics.svg)](https://www.nuget.org/packages/CB.Serilog.Sinks.AzureLogAnalytics/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A bare-bones custom [Serilog](https://serilog.net/) sink for Azure Log Analytics. Supports batching of logs and utilizes the `Azure.Monitor.Ingestion` library for ingestion to Log Analytics via the new Log Ingestion API.
 
 ## Prerequisites
@@ -8,7 +11,7 @@ A bare-bones custom [Serilog](https://serilog.net/) sink for Azure Log Analytics
 2. Log Analytics workspace provisioned
 3. A configured [data collection endpoint and data collection rule](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/tutorial-logs-ingestion-portal) in Azure with appropriate permissions.
 
-## Get Started
+## Getting Started
 
 ### Install Package
 
@@ -112,3 +115,17 @@ By default, if you don't provide a custom `Transform` function, the sink maps Se
 }
 ```
 You should define your custom Log Analytics table columns appropriately to match the default transformation output, or provide your own `Transform` function if your schema dictates a different structure.
+
+## Infrastructure as Code (Azure Setup)
+
+Configuring the Log Ingestion API requires setting up a Log Analytics Workspace, a Data Collection Endpoint (DCE), a Data Collection Rule (DCR), and granting `Monitoring Metrics Publisher` permissions via RBAC to the managed identity (or app registration) that will be sending logs.
+
+We have provided a reference implementation to automate this infrastructure in the `CB.Serilog.AzureLogAnalytics.DevOps.Sample` directory using **Azure Bicep**.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a pull request or open an issue if you encounter any problems or have feature suggestions.
+
+## License
+
+This project is licensed under the MIT License - see the `LICENSE` file for details.

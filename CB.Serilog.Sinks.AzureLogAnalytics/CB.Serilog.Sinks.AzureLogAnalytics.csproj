@@ -6,8 +6,7 @@
     <Nullable>enable</Nullable>
     <Title>Serilog Sink for Azure Log Analytics</Title>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <UserSecretsId>31a67bf7-759e-4706-a329-ab6ce5171e4b</UserSecretsId>
-    <Description>A Serilog Sink for Azure Log Analytics that used the Log Ingestion API</Description>
+    <Description>A Serilog Sink for Azure Log Analytics that u the Log Ingestion API</Description>
     <Copyright>Cam Bruce</Copyright>
     <PackageProjectUrl>https://github.com/cbruce80/serilog.sinks.azure.log-analytics</PackageProjectUrl>
     <RepositoryUrl>https://github.com/cbruce80/serilog.sinks.azure.log-analytics</RepositoryUrl>
@@ -16,17 +15,34 @@
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
   </PropertyGroup>
-
   <ItemGroup>
+    <None Include="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+  
     <None Include="..\LICENSE">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
-
+<PropertyGroup>
+  <Version>1.2.0</Version>
+  <PackageReleaseNotes>
+    - Added support for .NET 10.0.
+    - Updated to Serilog 4
+    - Updated Azure Identity dependency to 1.13.2.
+    - Removed Newtonsoft dependency, switching to System.Text
+    - Utilze the PeriodicBatching interface
+    - Improved log ingestion retry logic.
+  </PackageReleaseNotes>
+  
+  </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.13.2" />
-    <PackageReference Include="Azure.Monitor.Ingestion" Version="1.1.2" />
+    <PackageReference Include="Azure.Identity" Version="1.18.0" />
+    <PackageReference Include="Azure.Monitor.Ingestion" Version="1.2.0" />
     <PackageReference Include="Serilog" Version="4.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.0" />
     <PackageReference Include="Serilog.Sinks.PeriodicBatching" Version="5.0.0" />
