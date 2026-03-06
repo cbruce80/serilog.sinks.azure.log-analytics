@@ -4,7 +4,6 @@ using Azure.Monitor.Ingestion;
 using CB.Serilog.Sinks.AzureLogAnalytics.Configuration;
 using Serilog.Debugging;
 using Serilog.Events;
-using Serilog.Sinks.PeriodicBatching;
 using System.Text.Json;
 using IBatchedLogEventSink = Serilog.Sinks.PeriodicBatching.IBatchedLogEventSink;
 
@@ -42,7 +41,7 @@ public class AzureLogAnalyticsSink : IBatchedLogEventSink
         if (string.IsNullOrWhiteSpace(_config.StreamName))
             throw new ArgumentException("StreamName must be provided.");
 
-     if (_config.TokenCredential != null)
+        if (_config.TokenCredential != null)
         {
             _tokenCredential = _config.TokenCredential;
         }
@@ -50,19 +49,23 @@ public class AzureLogAnalyticsSink : IBatchedLogEventSink
         {
             _tokenCredential = new DefaultAzureCredential();
         }
-      if (  _config.Transform != null)
+        if (_config.Transform != null)
         {
             _transform = _config.Transform;
+        }
+        else
+        {
+            _transform = transform;
         }
         _logIngestionClient = new LogsIngestionClient(
             _config.DataCollectionEndpointUri, _tokenCredential);
     }
-    
+
     /// <summary>
     /// Writes a batch of log events to the Log Analytics Ingestion API
     /// </summary>
     /// <param name="batch"></param>
-   public async Task EmitBatchAsync(IEnumerable<LogEvent> batch)
+    public async Task EmitBatchAsync(IEnumerable<LogEvent> batch)
     {
         var logItems = new List<IDictionary<string, object>>();
 
@@ -91,12 +94,12 @@ public class AzureLogAnalyticsSink : IBatchedLogEventSink
 
             if (response.IsError)
             {
-                SelfLog.WriteLine($"AzureLogAnalyticsSink: Error posting to ingestion api: {response.Status} {response.ReasonPhrase}");
+                SelfLog.WriteLine("AzureLogAnalyticsSink: Error posting to ingestion api: {0} {1}", response.Status, response.ReasonPhrase);
             }
         }
         catch (Exception ex)
         {
-            SelfLog.WriteLine($"AzureLogAnalyticsSink: {ex.Message} StackTrace: {ex.StackTrace}");
+            SelfLog.WriteLine("AzureLogAnalyticsSink: {0} StackTrace: {1}", ex.Message, ex.StackTrace);
         }
     }
 
@@ -108,13 +111,10 @@ public class AzureLogAnalyticsSink : IBatchedLogEventSink
 
     private IDictionary<string, object> transform(LogEvent logEvent)
     {
-        var properties = new Dictionary<string, string>();
+        var properties = new Dictionary<string, object?>();
         foreach (var lep in logEvent.Properties)
         {
-            if (logEvent.Properties.TryGetValue(lep.Key, out LogEventPropertyValue? value) && value is ScalarValue sv && sv.Value is string rawValue)
-            {
-                properties.Add(lep.Key, rawValue);
-            }
+            properties[lep.Key] = GetValue(lep.Value);
         }
 
         Dictionary<string, object>? exDic = null;
@@ -132,7 +132,7 @@ public class AzureLogAnalyticsSink : IBatchedLogEventSink
             { "TimeGenerated", logEvent.Timestamp },
             { "Level", logEvent.Level.ToString() },
             { "Template", logEvent.MessageTemplate.Text },
-            { "Message", logEvent.RenderMessage() },
+            { "Message", logEvent.RenderMessage(_formatProvider) },
             { "Properties", properties }
         };
 
@@ -145,9 +145,45 @@ public class AzureLogAnalyticsSink : IBatchedLogEventSink
         {
             var logger = properties["SourceContext"];
             properties.Remove("SourceContext");
-            logObject["Logger"] = logger;
+            logObject["Logger"] = logger ?? string.Empty;
         }
 
         return logObject;
+    }
+
+    private static object? GetValue(LogEventPropertyValue value)
+    {
+        if (value is ScalarValue scalarValue)
+        {
+            return scalarValue.Value;
+        }
+
+        if (value is SequenceValue sequenceValue)
+        {
+            return sequenceValue.Elements.Select(GetValue).ToArray();
+        }
+
+        if (value is StructureValue structureValue)
+        {
+            var dict = new Dictionary<string, object?>();
+            foreach (var property in structureValue.Properties)
+            {
+                dict[property.Name] = GetValue(property.Value);
+            }
+            return dict;
+        }
+
+        if (value is DictionaryValue dictionaryValue)
+        {
+            var dict = new Dictionary<string, object?>();
+            foreach (var kvp in dictionaryValue.Elements)
+            {
+                var key = GetValue(kvp.Key)?.ToString() ?? string.Empty;
+                dict[key] = GetValue(kvp.Value);
+            }
+            return dict;
+        }
+
+        return value.ToString();
     }
 }
